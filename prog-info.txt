@@ -1,0 +1,36 @@
+[".jpg", ".jpeg", ".jfif", ".png", ".gif", ".webp"] #, ".heif", ".heic"]
+
+-------------------------------
+Windoze
+-------------------------------
+    ==============================================
+    Convert multiple files
+    ==============================================
+    [1] '-source_path_with_img_files' 'C:\\Users\\Sudhir\\Documents\\Code\\Python Scripts\\Data_path\\src' '-src_fmt' '*.*' '-target_ext' '.png' '-target_path_for_converted_files' 'C:\\Users\\Sudhir\\Documents\\Code\\Python Scripts\\Data_path\\target'
+    OR
+    [1] '-source_path_with_img_files' 'C:\\Users\\Sudhir\\Documents\\Code\\Python Scripts\\Data_path\\Data_path\src' '-src_fmt' '*.*' '-target_ext' '.png'
+
+    ==============================================
+    Convert single file
+    ==============================================
+    [2] '-source_path_with_img_files' 'C:\Users\Sudhir\Documents\Code\Python Scripts\Data_path\src' '-src_fmt' '*.jfif' '-target_ext' '.png'
+    # IMG_6453.HEIC
+
+-------------------------------
+Linux
+-------------------------------
+    ==============================================
+    Convert multiple files
+    ==============================================
+    [1] -source_path_with_img_files '../Data_path/src' -src_fmt '*.*' -target_ext '.png'
+    OR
+    [1] -source_path_with_img_files '../Data_path/src' -src_fmt '*.*' -target_path_for_converted_files '../Data_path/target' -target_ext '.png'
+
+    ==============================================
+    Convert single file
+    ==============================================
+    #/home/sudhir/Development/Python Scripts/Image-format-converter/
+    [2] -source_img_file_with_path '../Data_path/GQ7ZuGWXsAAgGt1.jfif' -target_ext gif
+    OR
+    [2] -source_path_with_img_files '../Data_path/GQ7ZuGWXsAAgGt1.jfif' -target_path_for_converted_files '../Data_path/target' -target_ext gif
+
