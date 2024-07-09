@@ -1,0 +1,6 @@
+pillow
+pyheif
+prettyprinter
+rich
+wand
+wheels
