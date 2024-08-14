@@ -4,6 +4,7 @@ import traceback
 import datetime
 import time
 import pathlib
+from xmlrpc.client import boolean
 
 from rich import print as rprint
 from rich.pretty import pprint as rpprint
@@ -25,7 +26,7 @@ Custom Class to store components of a FileName
 # E.g. C:\\p1\\p2\\p3\\GQ7ZuGWXsAAgGt1.jfif
 """
 class FileNameObject:
-    def __init__ (self, _org_file_name_with_path=None, _fn_with_ext=None, _path_to_file=None, _fn_with_path_noext=None, _fn_with_nopath_noext=None, _file_ext=None):
+    def __init__ (self, _org_file_name_with_path:str="", _fn_with_ext:str="", _path_to_file:str="", _fn_with_path_noext:str="", _fn_with_nopath_noext:str="", _file_ext:str=""):
         # C:\p1\p2\p3\GQ7ZuGWXsAAgGt1.jfif
         self.org_file_name_with_path = _org_file_name_with_path
         # GQ7ZuGWXsAAgGt1.jfif
@@ -70,6 +71,16 @@ def log_decorator(func):
         # print(f'{func.__name__} took {end - start:.6f} seconds to complete')
         return result
     return wrapper
+
+
+def trap_exception(function):
+    @wraps(function)
+    def wrapped(self, *args, **kwargs):
+        result = function(self, *args, **kwargs)
+        if not bool(result):
+            self.raise_exception()
+        return result
+    return wrapped
 
 
 """ The @wraps decorator is used to preserve the metadata of a function or 
@@ -230,14 +241,17 @@ def process_single_image_file(args) -> str:
     if target_ext.startswith(".") == False:
         target_ext=f".{target_ext}"
 
-    return process_image_file (fno.path_to_file, fno.fn_with_nopath_noext, fno.fn_with_ext, fno.file_ext, output_path, target_ext)
+    # -- overide & write file is asked
+    overide_write=1 if args.overide_write == 1 else 0
+
+    return process_image_file (fno.path_to_file, fno.fn_with_nopath_noext, fno.fn_with_ext, fno.file_ext, output_path, target_ext, overide_write)
 
 
 """
 Common method to process single image file, will be called by method that either processes a single image file or multiple files
 """
-def process_image_file (path_to_file: str, fn_with_nopath_noext: str, fn_with_ext: str, file_ext: str, output_path: str, target_ext: str) -> str:
-    return convert_image_to_format(path_to_file, fn_with_nopath_noext, fn_with_ext, file_ext, output_path, target_ext)
+def process_image_file (path_to_file: str, fn_with_nopath_noext: str, fn_with_ext: str, file_ext: str, output_path: str, target_ext: str, overide_write: int) -> str:
+    return convert_image_to_format(path_to_file, fn_with_nopath_noext, fn_with_ext, file_ext, output_path, target_ext, overide_write)
 
 
 """
@@ -246,9 +260,9 @@ Wrapper method to process multiple image files, will call process_image_file in 
 @log_decorator
 def process_multiple_image_files (args) -> int:
     # -- checking non-required arguments
-    src_fmt = args.src_fmt
-    if src_fmt is None:
-        src_fmt = "*.*"
+    src_ext = args.src_ext
+    if src_ext is None:
+        src_ext = "*.*"
 
     # -- If no output path is passed, then default to source file's path
     output_path=args.target_path_for_converted_files
@@ -258,22 +272,29 @@ def process_multiple_image_files (args) -> int:
     # -- if target extension does not startwith '.', then prefix it        
     target_ext=f".{args.target_ext}" if args.target_ext.startswith(".") == False else args.target_ext
 
-    log_info_message (f"Starting conversion of file(s) from [{args.source_path_with_img_files}] with format [{src_fmt}] \
-                                to [{output_path}] with format [{target_ext}] ...")
+    log_info_message (f"Starting conversion of file(s) from [{args.source_path_with_img_files}] with format [{src_ext}] to [{output_path}] with format [{target_ext}] ...")
 
     fileCnt=0
     readpath = pathlib.Path(f"{args.source_path_with_img_files}")
-    for file in readpath.rglob(f"{src_fmt}") :
+    if args.follow_recursively == 1:
+        log_debug_message (f"Being asked to perform recursive read of file(s) [{args.follow_recursively}] ...")
+        files_glob = readpath.rglob(f"{src_ext}")
+    else:
+        log_debug_message (f"NOT being asked to perform recursive read of file(s) [{args.follow_recursively}] ...")
+        files_glob = readpath.glob(f"{src_ext}")
+
+    for file in files_glob :
         fno=split_fp_to_parts(file)
 
         img_file_with_path=f"{fno.path_to_file}{os.path.sep}{fno.fn_with_ext}"
         log_str=f"Processing [{img_file_with_path}] and if it is a file [{os.path.isfile(img_file_with_path)}] ..."
 
-        if os.path.isfile(img_file_with_path):
+        if check_for_file(img_file_with_path):
             fileCnt += 1
 
+            overide_write=1 if args.overide_write == 1 else 0
             try:
-                cnv_image_file_with_path=process_image_file (fno.path_to_file, fno.fn_with_nopath_noext, fno.fn_with_ext, fno.file_ext, output_path, target_ext)
+                cnv_image_file_with_path=process_image_file (fno.path_to_file, fno.fn_with_nopath_noext, fno.fn_with_ext, fno.file_ext, output_path, target_ext, overide_write)
                 if cnv_image_file_with_path is not None:
                     log_info_message (f"{log_str} Converted [{img_file_with_path}] to [{cnv_image_file_with_path}] ...")
             except CustomError as ce:
@@ -326,7 +347,7 @@ Args:
 Returns:
 - None
 """
-def check_for_file(file_name: str) -> None:
+def check_for_file(file_name: str) -> boolean:
     return True if os.path.exists(file_name) and os.path.isfile(file_name) else False
 
 
@@ -334,8 +355,8 @@ def check_for_file(file_name: str) -> None:
 """
 # @log_decorator
 # def convert_image_to_format (img_file_with_path, in_ext, target_ext):
-def convert_image_to_format(path_to_file: str, fn_with_nopath_noext: str, fn_with_ext: str, in_ext: str, output_path: str, target_ext: str) -> str:
-    log_debug_message (f"{get_method_name()}::path_to_file [{path_to_file}], fn_with_nopath_noext [{fn_with_nopath_noext}], fn_with_ext [{fn_with_ext}], in_ext [{in_ext}], output_path [{output_path}], target_ext [{target_ext}] ...")
+def convert_image_to_format(path_to_file: str, fn_with_nopath_noext: str, fn_with_ext: str, in_ext: str, output_path: str, target_ext: str, overide_write: int) -> str:
+    log_debug_message (f"{get_method_name()}::path_to_file [{path_to_file}], fn_with_nopath_noext [{fn_with_nopath_noext}], fn_with_ext [{fn_with_ext}], in_ext [{in_ext}], output_path [{output_path}], target_ext [{target_ext}], overide_write [{overide_write}] ...")
     matched_ext=False
     quality_in=None
     try:
@@ -351,121 +372,61 @@ def convert_image_to_format(path_to_file: str, fn_with_nopath_noext: str, fn_wit
 
         # Create target file name with full path 
         cnv_img_file_with_path=f"{output_path}{os.path.sep}{fn_with_nopath_noext}{target_ext}"
+        # If target file exists, then log that before continuing ...
+        if check_for_file(cnv_img_file_with_path):
+            if overide_write==1:
+                log_warn_message (f"{get_method_name()}::Target file [{cnv_img_file_with_path}] exists. But continuing as overide_write=[{overide_write}] ...")
+            else:
+                raise CustomError (f"{get_method_name()}::Target file [{cnv_img_file_with_path}] exists. Skipping ...")
 
         # Compare if file exists in target folder. Therefore possibly making it the same. Then skip
         if img_file_with_path == cnv_img_file_with_path:
-            log_warn_message (f"{get_method_name()}::Converted file [{cnv_img_file_with_path}] already exists. Skipping conversion ...")
-            return cnv_img_file_with_path
+            if overide_write==1:
+                log_warn_message (f"{get_method_name()}::Source [{img_file_with_path}] and to be Converted file [{cnv_img_file_with_path}] exist. But continuing as overide_write=[{overide_write}] ...")
+            else:
+                raise CustomError (f"{get_method_name()}::Source [{img_file_with_path}] and to be Converted file [{cnv_img_file_with_path}] exist. Skipping conversion ...")
 
-        # Compare if source & target file names are same. Therefore skip
-        fn_target_with_ext=f"{fn_with_nopath_noext}{target_ext}"
-        if fn_with_ext == fn_target_with_ext:
-            log_warn_message (f"{get_method_name()}::Source [{fn_with_ext}] and converted file [{fn_target_with_ext}] have same name+extension. Skipping conversion ...")
-            return cnv_img_file_with_path
+        # # Compare if source & target file names are same. Therefore skip
+        # fn_target_with_ext=f"{fn_with_nopath_noext}{target_ext}"
+        # if fn_with_ext == fn_target_with_ext:
+        #     log_warn_message (f"{get_method_name()}::Source [{fn_with_ext}] and converted file [{fn_target_with_ext}] have same name+extension. Skipping conversion ...")
+        #     return cnv_img_file_with_path
 
         # ----------------------------------------------------------------------------------
         # Check if either source format or expected formats are supported before going ahead
         # ----------------------------------------------------------------------------------
         matched_ext=check_if_supported_extension(in_ext, target_ext)
 
-        # Create instance of MyImageConverter class
-        mic = MyImageConverter()
-
-        # # Converting an image from PNG, WEBP, JPG, JPEG, JIF formats
-        # if in_ext.lower() in ['.png', '.heic', '.heif', ".jpg", ".jpeg", ".jif", ".jfif", ".webp"]:
-        #     matched_ext=True
-
         # This means we could do not handle this file format to convert from
         if matched_ext == False:
             raise CustomError(f"{get_method_name()}::NO SUPPORT for files with format - in_ext [{in_ext}] to target_ext [{target_ext}] ...")
         else:
+            # Create instance of MyImageConverter class
+            from myimageconverter import MyImageConverter
+            mic = MyImageConverter()
+
             """
             Note that in order to convert HEIF and HEIC files to JPEG using Pillow, we need to convert them to the 
             RGB color space. This can result in a loss of some of the advanced features of HEIF and HEIC, such as 
             support for high dynamic range (HDR) and wide color gamut (WCG).
             """
-            if in_ext.lower() in [".heif", "heic"]:
-                if target_ext.lower() in ["jpeg", "jpg"]:
-                    mic.convert_heic_to_jpeg(img_file_with_path, in_ext, cnv_img_file_with_path, target_ext)
-                else:
-                    mic.convert_heic_to_jpg(img_file_with_path, in_ext, cnv_img_file_with_path, target_ext)
+            if in_ext.lower() in [".heif", ".heic"]:
+                log_debug_message (f"{get_method_name()}::Before call to convert_heic_to_format with img_file_with_path=[{img_file_with_path}], in_ext=[{in_ext}], cnv_img_file_with_path=[{cnv_img_file_with_path}], target_ext=[{target_ext}] ...")
+                mic.convert_heic_to_format(img_file_with_path, in_ext, cnv_img_file_with_path, target_ext)
             elif target_ext.lower() in ["jpeg", "jpg"] and in_ext.lower() not in [".heif", "heic"]:
+                log_debug_message (f"{get_method_name()}::Before call to convert_to_jpeg with img_file_with_path=[{img_file_with_path}], in_ext=[{in_ext}], cnv_img_file_with_path=[{cnv_img_file_with_path}] ...")
                 mic.convert_to_jpeg(img_file_with_path, in_ext, cnv_img_file_with_path)
-                # mic.convert_to_jpg(img_file_with_path, in_ext, cnv_img_file_with_path)
             else:
+                log_debug_message (f"{get_method_name()}::Before ELSE call to convert_to_nonjpeg with img_file_with_path=[{img_file_with_path}], in_ext=[{in_ext}], cnv_img_file_with_path=[{cnv_img_file_with_path}] ...")
                 mic.convert_to_nonjpeg(img_file_with_path, in_ext, cnv_img_file_with_path)
 
             log_debug_message (f"{get_method_name()}::Successfully converted file [{img_file_with_path}] to [{cnv_img_file_with_path}] ...")
             return cnv_img_file_with_path
     except UnidentifiedImageError as uie:
-        raise uie
+        raise #uie
     except Exception as e:
         # -- send the exception on upwards
-        raise e
-
-
-
-class MyImageConverter:
-    def convert_to_nonjpeg(self, img_file_with_path, in_ext, cnv_img_file_with_path):
-        log_debug_message (f"{get_method_name()}::img_file_with_path [{img_file_with_path}], cnv_img_file_with_path [{cnv_img_file_with_path}], quality% [{None}] ...")
-        rgb_im = Image.open(img_file_with_path)
-        save_img_file(rgb_im, img_file_with_path, in_ext, cnv_img_file_with_path, None)
-
-    def convert_to_jpeg(self, img_file_with_path, in_ext, cnv_img_file_with_path):
-        log_debug_message (f"{get_method_name()}::img_file_with_path [{img_file_with_path}], cnv_img_file_with_path [{cnv_img_file_with_path}], quality% [{const.JPEG_QUALITY_IN_PERCENT}] ...")
-        """
-        Need to perform one extra step when converting from .png to .jpg
-        """
-        rgb_im = Image.open(img_file_with_path).convert('RGB')
-        save_img_file(rgb_im, img_file_with_path, in_ext, cnv_img_file_with_path, const.JPEG_QUALITY_IN_PERCENT)
-
-    def convert_heic_to_format(self, img_file_with_path, in_ext, cnv_img_file_with_path, target_ext):
-        log_debug_message (f"{get_method_name()}::img_file_with_path [{img_file_with_path}], cnv_img_file_with_path [{cnv_img_file_with_path}], quality% [{const.JPEG_QUALITY_IN_PERCENT}] ...")
-        import pillow_heif
-        pillow_heif.register_heif_opener()
-
-        if img_file_with_path.filename.endswith(('.heic', '.heif', '.HEIC', '.HEIF')):
-            img = Image.open(img_file_with_path)
-            img.format(target_ext.replace('.',''))
-            # img.save('c:\image_name.png', format('png'))
-            save_img_file(img, img_file_with_path, in_ext, cnv_img_file_with_path, const.JPEG_QUALITY_IN_PERCENT if target_ext in ["jpg","jpeg"] else None)
-
-    def convert_heic_to_format(self, img_file_with_path, in_ext, cnv_img_file_with_path, target_ext):
-        log_debug_message (f"{get_method_name()}::img_file_with_path [{img_file_with_path}], cnv_img_file_with_path [{cnv_img_file_with_path}], quality% [{const.JPEG_QUALITY_IN_PERCENT}] ...")
-        from wand.image import Image
-
-        if img_file_with_path.filename.endswith(('.heic', '.heif', '.HEIC', '.HEIF')):
-            """Convert HEIC file to JPG."""
-            with Image(filename=img_file_with_path) as img:
-                img.format = target_ext.replace('.','')
-                # img.save(filename=jpg_path)
-                save_img_file(img, img_file_with_path, in_ext, cnv_img_file_with_path, const.JPEG_QUALITY_IN_PERCENT)
-
-
-"""
-"""
-# @log_decorator
-def save_img_file (rgb_im, img_file_with_path, in_ext, cnv_img_file_with_path, quality_in=None) -> str:
-    try:
-        log_debug_message (f"{get_method_name()}::img_file_with_path [{img_file_with_path}], cnv_img_file_with_path [{cnv_img_file_with_path}], quality% [{quality_in}] ...")
-
-        if quality_in == None:
-            rgb_im.save(cnv_img_file_with_path)
-        else:
-            rgb_im.save(cnv_img_file_with_path, quality=quality_in)
-
-        # log_debug_message ("  2...")
-        if quality_in == None:
-            rgb_im.save(cnv_img_file_with_path)
-        else:
-            rgb_im.save(cnv_img_file_with_path, quality=quality_in)
-        # log_debug_message ("  3...")
-        log_debug_message (f"{get_method_name()}::Successfully converted file to [{cnv_img_file_with_path}] ...")
-        return cnv_img_file_with_path
-    except Exception as e:
-        # print(f"Cannot convert {img_file_with_path} to {target_ext}")
-        # raise Exception(f"{get_method_name()}::Error occurred [{e}] ====> img_file_with_path [{img_file_with_path}], in_ext [{in_ext}], target_ext [{target_ext}], quality [{quality_in}] -- cnvfile [{cnv_img_file_with_path}] ...")
-        raise Exception(f"{get_method_name()}::Error occurred [{e}]")
+        raise #e
 
 
 def open_and_present_image_file (cnv_image_filename: str) -> None:
@@ -474,6 +435,9 @@ def open_and_present_image_file (cnv_image_filename: str) -> None:
     cnv_image_file.show()
 
 
+"""
+Return a string containing a date time value formatted with passed format string, else in the "%Y%m%d%T%H%M%S" format
+"""
 def create_dt_string (fmt="%Y%m%d%T%H%M%S") -> str:
     log_debug_message (f"------ Inside:{get_method_name()} with fmt:[{fmt}]")
     return datetime.datetime.now().strftime(fmt)  #current date and time
@@ -497,7 +461,7 @@ def get_method_name(fmt=None, *args, **kwargs) -> str:
 """
 Method to setup logger for the running application
 """
-def setup_logger():
+def setup_logger() -> logging.Logger:
     # Create custom logger
     logger = logging.getLogger(__name__)
 
@@ -507,8 +471,8 @@ def setup_logger():
     f_handler=logging.FileHandler (f"{const.LOG_DIR}/{const.LOG_FILE_NAME}")
 
     # Set default logging level as INFO and can be overridden in case ISDEBUG==1
-    # logging.basicConfig(level=logging.INFO, format=const.LOGFILE_ENTRY_FORMAT_STRING, handlers=[RichHandler(rich_tracebacks=True)])
-    logging.basicConfig(level=logging.INFO, format=const.LOGFILE_ENTRY_FORMAT_STRING)
+    logging.basicConfig(level=logging.INFO, format=const.LOGFILE_ENTRY_FORMAT_STRING, handlers=[RichHandler(rich_tracebacks=True)])
+    # logging.basicConfig(level=logging.INFO, format=const.LOGFILE_ENTRY_FORMAT_STRING)
 
     if const.ISDEBUG == 1:
         # Set LOG level according to OVERRIDE in constants
@@ -533,7 +497,7 @@ def setup_logger():
 """
 Method to wrap call to underlying logging with log level (default is DEBUG)
 """
-def log_message(msg_str, log_type='DEBUG') -> None:
+def log_message(msg_str, log_type=logging.DEBUG) -> None:
     if log_type == logging.DEBUG:
         logging.getLogger(__name__).debug(msg_str)
     elif log_type == logging.WARNING:

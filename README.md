@@ -12,6 +12,10 @@ Contains methods used
 Script to convert one file at a time
 ### convert-all-files.py
 Script to convert multiple files at a time
+### myimageconvert.py
+Contains class and methods to handle image conversion
+### file_test.py
+Check single image file of format HEIF and introspect it and print out its attributes
 ### requirements.txt
 This script requires the following libraries to be installed.
 It can be used as,
@@ -42,11 +46,15 @@ python3 pip install -r requirements.txt
 python3 -m pip install --upgrade pip
 
 ## Script execution mechanism
+### -- Common parameter "-overide_debug" available to override log level to DEBUG
 ### Windoze
 #### Convert multiple files with following parameters
-    [PATH WHERE INSTALLED]\python convert-all-files.py '-source_path_with_img_files' 'C:\\Code\\Python Scripts\\Data_path\\src' '-src_fmt' '*.*' '-target_ext' '.png' '-target_path_for_converted_files' 'C:\\Users\\Sudhir\\Documents\\Code\\Python Scripts\\Data_path\\target'
+##### Additional optional arguments
+###### "-follow_recursively" to force script to recursively search for files with "-src_ext" values
+###### "-overide_write" to force overide & write out target file if it exists
+    [PATH WHERE INSTALLED]\python convert-all-files.py '-source_path_with_img_files' 'C:\\Code\\Python Scripts\\Data_path\\src' '-src_ext' '*.*' '-target_ext' '.png' '-target_path_for_converted_files' 'C:\\Users\\Sudhir\\Documents\\Code\\Python Scripts\\Data_path\\target'
     OR
-    [PATH WHERE INSTALLED]\python convert-all-files.py '-source_path_with_img_files' 'C:\\Code\\Python Scripts\\Data_path\\Data_path\src' '-src_fmt' '*.*' -target_ext' '.png'
+    [PATH WHERE INSTALLED]\python convert-all-files.py '-source_path_with_img_files' 'C:\\Code\\Python Scripts\\Data_path\\Data_path\src' '-src_ext' '*.*' -target_ext' '.png'
     OR 
     [PATH WHERE INSTALLED]\python convert-all-files.py will give you help and expected paramters
 
@@ -60,10 +68,14 @@ python3 -m pip install --upgrade pip
     [PATH WHERE INSTALLED]\python convert_image.py will give you help and expected paramters
 
 ### Linux
+### -- Common parameter "-overide_debug" available to override log level to DEBUG
 #### Convert multiple files
-    [PATH WHERE INSTALLED]/python convert-all-files.py -source_path_with_img_files '../Data_path/src' -src_fmt '*.*' -target_ext '.png'
+##### Additional optional arguments 
+###### "-follow_recursively" to force script to recursively search for files with "-src_ext" values
+###### "-overide_write" to force overide & write out target file if it exists
+    [PATH WHERE INSTALLED]/python convert-all-files.py -source_path_with_img_files '../Data_path/src' -src_ext '*.*' -target_ext '.png'
     OR
-    [PATH WHERE INSTALLED]/python convert-all-files.py -source_path_with_img_files '../Data_path/src' -src_fmt '*.*' -target_path_for_converted_files '../Data_path/target' -target_ext '.png'
+    [PATH WHERE INSTALLED]/python convert-all-files.py -source_path_with_img_files '../Data_path/src' -src_ext '*.*' -target_path_for_converted_files '../Data_path/target' -target_ext '.png'
     OR 
     [PATH WHERE INSTALLED]/python convert-all-files.py will give you help and expected paramters
 
