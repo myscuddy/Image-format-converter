@@ -1,0 +1,7 @@
+"/home/sudhir/Development/Python Scripts/Image-format-converter/.venv/bin/python" "/home/sudhir/Development/Python Scripts/Image-format-converter/file_test.py" "-source_path_with_img_files" "/home/sudhir/Downloads/Localsend/2024-Srini-Baylor-MS_Convocation" "-do_recursive" "1" "-overide_debug" "0" "-file_ext" ".png"
+
+"/home/sudhir/Development/Python Scripts/Image-format-converter/.venv/bin/python" "/home/sudhir/Development/Python Scripts/Image-format-converter/convert_image.py" "-source_img_file_with_path" "/home/sudhir/Downloads/Localsend/2024-Srini-Baylor-MS_Convocation/IMG_7610.HEIC" "-target_path_for_converted_files" "/home/sudhir/Downloads/Localsend/Converted" "-target_ext" ".jpg" "-overide_debug" "0" "-overide_write" "1"
+
+"/home/sudhir/Development/Python Scripts/Image-format-converter/.venv/bin/python" "/home/sudhir/Development/Python Scripts/Image-format-converter/convert-all-files.py" "-source_path_with_img_files" "/home/sudhir/Downloads/Localsend/2024-Srini-Baylor-MS_Convocation" "-src_ext" ".heic" "-target_path_for_converted_files" "/home/sudhir/Downloads/Localsend/Converted" "-target_ext" ".jpg" "-overide_debug" "1" "-overide_write" "1"
+
+

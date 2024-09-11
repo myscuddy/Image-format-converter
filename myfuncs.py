@@ -1,3 +1,5 @@
+import glob
+import logging.handlers
 import os, sys
 import logging
 import traceback
@@ -73,6 +75,9 @@ def log_decorator(func):
     return wrapper
 
 
+"""
+Wrapper method to trap exceptions of called functions
+"""
 def trap_exception(function):
     @wraps(function)
     def wrapped(self, *args, **kwargs):
@@ -81,6 +86,31 @@ def trap_exception(function):
             self.raise_exception()
         return result
     return wrapped
+
+
+
+"""
+Wrapper method to handle exceptions from within wrapped methods and print it right then and there.
+"""
+def exception(logger): 
+    # logger is the logging object 
+    # exception is the decorator objects  
+    # that logs every exception into log file 
+    def decorator(func): 
+
+        @wraps(func) 
+        def wrapper(*args, **kwargs): 
+            try: 
+                return func(*args, **kwargs) 
+              
+            except: 
+                issue = "exception in "+func.__name__+"\n"
+                issue = issue+"-------------------------------------------------------------------------\n" 
+                logger.exception(issue) 
+            # raise
+          
+        return wrapper 
+    return decorator 
 
 
 """ The @wraps decorator is used to preserve the metadata of a function or 
@@ -255,14 +285,225 @@ def process_image_file (path_to_file: str, fn_with_nopath_noext: str, fn_with_ex
 
 
 """
+Check argument value for True|False|1|0 as possible values, else return Custome Exception
+"""
+def t_or_f(argval):
+    ua = str("" if argval is None else argval).upper()
+    if 'TRUE'.startswith(ua):
+       return True
+    elif 'FALSE'.startswith(ua):
+       return False
+    elif argval == '1' or argval == 1:
+        return True
+    elif argval == '0' or argval == 0:
+        return False
+    else:
+       raise CustomError (f"Unknown argument value {argval}")
+
+
+"""
+Create file name with path
+"""
+def prep_file_with_path(fpath: str, fname: str, file_ext: str) -> str:
+    if fname is None and file_ext is None:
+        fp = fpath if fpath.endswith(os.path.sep) else fpath+os.path.sep
+    elif file_ext is None:
+        fp = fpath+fname if fpath.endswith(os.path.sep) else fpath+os.path.sep+fname
+    else:
+        fp = fpath+fname+file_ext if fpath.endswith(os.path.sep) else fpath+os.path.sep+fname+("" if file_ext is None else file_ext)
+    return fp
+
+
+"""
+"""
+def prepare_file_ext (file_ext) -> str:
+    if file_ext is None:
+        file_ext="**/*.*" 
+    else:
+        if file_ext.startswith("."):
+            file_ext = "**/*"+file_ext
+        elif file_ext.startswith("**/*"):
+            file_ext = file_ext
+        elif file_ext.startswith("*"):
+            file_ext = "**/"+file_ext
+        else:
+            raise CustomError (f"Unknown value in file_ext [{file_ext}]")
+
+    return file_ext
+
+
+
+"""
+Count files in a folder path and do it recursively if requested
+"""
+@log_decorator
+@exception(logging.getLogger(__name__))
+def get_file_count(pathname:str, file_ext:str='*.*', do_recursive:bool=False) -> int:
+    method_name=get_method_name()
+    smsg=f"{method_name}::1::folder_path=[{pathname}], file_ext=[{file_ext}], do_recursive=[{do_recursive}]"
+    log_info_message (smsg)
+
+    file_ext=prepare_file_ext(file_ext)
+    smsg=f"{method_name}::2::folder_path=[{pathname}], file_ext=[{file_ext}], do_recursive=[{do_recursive}]"
+
+    file_cnt=0
+    for file in glob.glob(os.path.join(pathname, file_ext), recursive=do_recursive):
+        fn_with_path=os.path.join(pathname, file)
+        fno=split_fp_to_parts(fn_with_path)
+
+        print (f"fn_with_path={fn_with_path}, file_ext=[{file_ext}], fno.file_ext=[{fno.file_ext}], const.SUPPORTED_IN_FORMATS=[{list(map(lambda x: x.upper(), const.SUPPORTED_IN_FORMATS))}] ")
+        if check_for_file(fn_with_path) and str.upper(fno.file_ext) in list(map(lambda x: x.upper(), const.SUPPORTED_IN_FORMATS)):
+            file_cnt+=1
+
+    smsg+=f" - returning with count of [{file_cnt}]."
+    log_info_message (smsg)
+
+    return file_cnt
+
+
+# """
+# Count files in a folder path and do it recursively if requested
+# """
+# @log_decorator
+# @exception(logging.getLogger(__name__))
+# def count_files_in_dir(folder_path: str, file_name:str = None, file_ext:str = None, do_recursive=False) -> int:
+#     method_name=get_method_name()
+#     file_name="" if file_name is None else file_name
+#     file_ext="" if file_ext is None else file_ext
+#     file_ctr=0
+#     smsg=f"{method_name}::folder_path=[{folder_path}], file_name=[{file_name}], file_ext=[{file_ext}], do_recursive=[{do_recursive}]"
+
+#     listdirstr = prep_file_with_path(folder_path, None if (file_name is None or file_name=="") else file_name, None) #file_ext)
+#     smsg+=f", listdirstr=[{listdirstr}]"
+#     log_info_message (smsg)
+
+#     # return get_file_count(folder_path, file_ext, do_recursive)
+
+#     listdir = os.listdir(listdirstr)
+
+#     for fn in listdir:
+#         fnwithpath=prep_file_with_path(folder_path, fn, None)
+#         fno=split_fp_to_parts(fnwithpath)
+
+#         """
+#         if entry is a directory and you are asked to go recursively into the path, then go into the directory and count files in that level 
+#         """
+#         smsg=f"{method_name}::folder_path=[{folder_path}], fn=[{fn}], fnwithpath=[{fnwithpath}], file_ext=[{file_ext}], "
+#         if os.path.isdir(fnwithpath) and do_recursive:
+#             smsg+=" [Is A Directory] ..."
+#             file_ctr += count_files_in_dir(fnwithpath, file_ext, do_recursive)
+#             # file_ctr += get_file_count(fnwithpath, file_ext, do_recursive)
+#         else:
+#             smsg+=f" fno.file_ext=[{fno.file_ext}] ..."
+
+#         log_debug_message (f"{smsg}")
+
+#         """
+#         If a entry is a file then count as one, else use 0 to not count it
+#         """
+#         if check_for_file(fnwithpath):
+#             """ File extension is not passed as filter, take it as file to be counted """
+#             if file_ext is None:
+#                 file_ctr += 1 
+#             else:
+#                 """ Compare upper of both file extensions, passed as well of the file and count as expected file if they match or not """
+#                 file_ctr += 1 if fno.file_ext == file_ext else 0
+#         else:
+#             file_ctr += 0 
+
+#     log_debug_message (f"{method_name}::folder_path=[{folder_path}], file_ext=[{file_ext}], do_recursive=[{do_recursive}] - file_ctr [{file_ctr}] ...")
+#     return file_ctr
+
+
+#SDSDSD
+# """
+# Wrapper method to process multiple image files, will call process_image_file in a loo[]
+# """
+# @log_decorator
+# @exception(logging.getLogger(__name__))
+# def process_multiple_image_files (args) -> int:
+#     method_name=get_method_name()
+#     # -- checking non-required arguments
+#     if args.src_ext is None:
+#         src_ext = "*.*"
+#     else:
+#         # -- if target extension does not startwith '.*', then prefix it        
+#         src_ext=f"*{args.src_ext}" if args.src_ext.startswith(".") else args.src_ext
+#         src_ext=f"{args.src_ext}"  if args.src_ext.startswith("*") else f"*{args.src_ext}"
+
+#     # -- If no output path is passed, then default to source file's path
+#     output_path=args.target_path_for_converted_files
+#     if output_path is None:
+#         output_path=args.source_path_with_img_files
+
+#     # -- if target extension does not startwith '.', then prefix it        
+#     target_ext=f".{args.target_ext}" if args.target_ext.startswith(".") == False else args.target_ext
+
+#     log_info_message (f"{method_name}::Starting conversion of file(s) from [{args.source_path_with_img_files}] with format [{args.src_ext}]/[{src_ext}] to [{output_path}] with format [{args.target_ext}]/[{target_ext}] ...")
+
+#     fileCnt=0
+#     follow_recursively = t_or_f(args.follow_recursively)
+
+#     # Count the # of files to be processed based on what is passed as argument
+#     # file_count=count_files_in_dir(args.source_path_with_img_files, file_ext=args.src_ext, do_recursive=follow_recursively)
+#     file_count=get_file_count(args.source_path_with_img_files, file_ext=args.src_ext, do_recursive=follow_recursively)
+    
+#     log_info_message (f"{method_name}::There are [{file_count}] files with format [{src_ext}] to be processed ...")
+
+#     # SDSDSD
+#     # return
+
+#     smsg=f"{method_name}::"
+#     smsg1=f"asked to perform recursive read of file(s) [{follow_recursively}] ..."
+#     readpath = pathlib.Path(f"{args.source_path_with_img_files}")
+#     if args.follow_recursively == 1:
+#         smsg=f"{smsg}Being {smsg1}"
+#         files_glob = readpath.rglob(f"{src_ext}")
+#     else:
+#         smsg=f"{smsg}NOT being {smsg1}"
+#         files_glob = readpath.glob(f"{src_ext}")
+#     # log_debug_message (f"{method_name}::Being asked to perform recursive read of file(s) [{follow_recursively}] ...")
+#     log_info_message (f"{method_name}::Being asked to perform recursive read of file(s) [{follow_recursively}] ...")
+
+#     for file in files_glob :
+#         fno=split_fp_to_parts(file)
+#         log_info_message (f"{method_name}::[{file}] ...")
+
+#         img_file_with_path=f"{fno.path_to_file}{os.path.sep}{fno.fn_with_ext}"
+#         isAFile=check_for_file(img_file_with_path)
+#         log_str=f"{method_name}::Processing [{img_file_with_path}] - Is a file? = [{isAFile}]"
+
+#         if isAFile:
+#             log_str+=" ..."
+#             fileCnt += 1
+
+#             overide_write=1 if args.overide_write == 1 else 0
+#             try:
+#                 cnv_image_file_with_path=process_image_file (fno.path_to_file, fno.fn_with_nopath_noext, fno.fn_with_ext, fno.file_ext, output_path, target_ext, overide_write)
+#                 if cnv_image_file_with_path is not None:
+#                     log_info_message (f"{method_name}::File [{fileCnt}/{file_count}] :: {log_str} Converted [{img_file_with_path}] to [{cnv_image_file_with_path}] ...")
+#             except CustomError as ce:
+#                 log_error_message (f"{method_name}::*** ERROR [{str(ce)}] converting file [{file}] ***")
+#             except UnidentifiedImageError as uie:
+#                 log_error_message (f"{method_name}::*** ERROR [{str(uie)}] converting file [{file}] ***")
+#             except Exception as ex1:
+#                 raise ex1
+#         else:
+#             log_str+=". Skipped as it is not a File ..."
+
+#         log_info_message (f"{method_name}::{log_str}")
+
+#     return fileCnt
+#SDSDSD
+
+
+"""
 Wrapper method to process multiple image files, will call process_image_file in a loo[]
 """
 @log_decorator
+@exception(logging.getLogger(__name__))
 def process_multiple_image_files (args) -> int:
-    # -- checking non-required arguments
-    src_ext = args.src_ext
-    if src_ext is None:
-        src_ext = "*.*"
+    method_name=get_method_name()
 
     # -- If no output path is passed, then default to source file's path
     output_path=args.target_path_for_converted_files
@@ -272,41 +513,55 @@ def process_multiple_image_files (args) -> int:
     # -- if target extension does not startwith '.', then prefix it        
     target_ext=f".{args.target_ext}" if args.target_ext.startswith(".") == False else args.target_ext
 
-    log_info_message (f"Starting conversion of file(s) from [{args.source_path_with_img_files}] with format [{src_ext}] to [{output_path}] with format [{target_ext}] ...")
+    src_ext=prepare_file_ext(args.src_ext)
+    log_info_message (f"{method_name}::Starting conversion of file(s) from [{args.source_path_with_img_files}] with format [{args.src_ext}]/[{src_ext}] to [{output_path}] with format [{args.target_ext}]/[{target_ext}] ...")
 
     fileCnt=0
-    readpath = pathlib.Path(f"{args.source_path_with_img_files}")
-    if args.follow_recursively == 1:
-        log_debug_message (f"Being asked to perform recursive read of file(s) [{args.follow_recursively}] ...")
-        files_glob = readpath.rglob(f"{src_ext}")
-    else:
-        log_debug_message (f"NOT being asked to perform recursive read of file(s) [{args.follow_recursively}] ...")
-        files_glob = readpath.glob(f"{src_ext}")
+    follow_recursively = t_or_f(args.follow_recursively)
 
-    for file in files_glob :
+    # Count the # of files to be processed based on what is passed as argument
+    file_count=get_file_count(args.source_path_with_img_files, file_ext=args.src_ext, do_recursive=follow_recursively)
+    
+    log_info_message (f"{method_name}::There are [{file_count}] files with format [{args.src_ext}] to be processed ...")
+
+    log_info_message (f"{method_name}::Being asked to perform recursive [{follow_recursively}] read & conversion of [{file_count}] file(s) under [{args.source_path_with_img_files}] with src_ext [{src_ext}] ...")
+
+    # SDSDSD
+    # return
+
+    # for file in files_glob :
+    for file in glob.glob(os.path.join(args.source_path_with_img_files, src_ext), recursive=follow_recursively):
         fno=split_fp_to_parts(file)
+        log_info_message (f"{method_name}::[{file}] ...")
 
-        img_file_with_path=f"{fno.path_to_file}{os.path.sep}{fno.fn_with_ext}"
-        log_str=f"Processing [{img_file_with_path}] and if it is a file [{os.path.isfile(img_file_with_path)}] ..."
+        # create full file name with path and extension of the source file
+        img_file_with_path=os.path.join(fno.path_to_file, fno.fn_with_ext)
 
-        if check_for_file(img_file_with_path):
+        #-- only process if a file and file extension is in supported formats to convert from
+        isAValidFile=check_for_file(img_file_with_path) and str.upper(fno.file_ext) in list(map(lambda x: x.upper(), const.SUPPORTED_IN_FORMATS))
+        log_str=f"{method_name}::Processing [{img_file_with_path}] - Is a Valid file? = [{isAValidFile}]"
+        if isAValidFile:
+            log_str+=" ..."
             fileCnt += 1
 
             overide_write=1 if args.overide_write == 1 else 0
             try:
                 cnv_image_file_with_path=process_image_file (fno.path_to_file, fno.fn_with_nopath_noext, fno.fn_with_ext, fno.file_ext, output_path, target_ext, overide_write)
                 if cnv_image_file_with_path is not None:
-                    log_info_message (f"{log_str} Converted [{img_file_with_path}] to [{cnv_image_file_with_path}] ...")
+                    log_info_message (f"{method_name}::File [{fileCnt}/{file_count}] :: {log_str} Converted [{img_file_with_path}] to [{cnv_image_file_with_path}] ...")
             except CustomError as ce:
-                log_error_message (f"*** ERROR [{str(ce)}] converting file [{file}] ***")
+                log_error_message (f"{method_name}::*** ERROR [{str(ce)}] converting file [{file}] ***")
             except UnidentifiedImageError as uie:
-                log_error_message (f"*** ERROR [{str(uie)}] converting file [{file}] ***")
+                log_error_message (f"{method_name}::*** ERROR [{str(uie)}] converting file [{file}] ***")
             except Exception as ex1:
                 raise ex1
         else:
-            log_info_message (f"{log_str} Skipped as it is not a File ...")
+            log_str+=". Skipped as it is not a File ..."
+
+        log_info_message (f"{method_name}::{log_str}")
 
     return fileCnt
+
 
 
 """
@@ -331,7 +586,7 @@ Args:
 Returns:
 - None
 """
-def check_for_dir(dir_name: str) -> None:
+def create_dir_if_it_does_not_exist(dir_name: str) -> None:
     if os.path.exists(dir_name) and os.path.isdir(dir_name):
         pass
     else:
@@ -352,13 +607,13 @@ def check_for_file(file_name: str) -> boolean:
 
 
 """
+Method that will convert single file of one format into another format
 """
-# @log_decorator
-# def convert_image_to_format (img_file_with_path, in_ext, target_ext):
+@exception(logging.getLogger(__name__))
 def convert_image_to_format(path_to_file: str, fn_with_nopath_noext: str, fn_with_ext: str, in_ext: str, output_path: str, target_ext: str, overide_write: int) -> str:
     log_debug_message (f"{get_method_name()}::path_to_file [{path_to_file}], fn_with_nopath_noext [{fn_with_nopath_noext}], fn_with_ext [{fn_with_ext}], in_ext [{in_ext}], output_path [{output_path}], target_ext [{target_ext}], overide_write [{overide_write}] ...")
     matched_ext=False
-    quality_in=None
+
     try:
         # Create source file name with full path 
         img_file_with_path=f"{path_to_file}{os.path.sep}{fn_with_ext}"
@@ -368,7 +623,7 @@ def convert_image_to_format(path_to_file: str, fn_with_nopath_noext: str, fn_wit
             raise CustomError (f"[{img_file_with_path}] is not a valid file!!!")
 
         # Check if target dir exists, else try to create it
-        check_for_dir(output_path)
+        create_dir_if_it_does_not_exist(output_path)
 
         # Create target file name with full path 
         cnv_img_file_with_path=f"{output_path}{os.path.sep}{fn_with_nopath_noext}{target_ext}"
@@ -385,12 +640,6 @@ def convert_image_to_format(path_to_file: str, fn_with_nopath_noext: str, fn_wit
                 log_warn_message (f"{get_method_name()}::Source [{img_file_with_path}] and to be Converted file [{cnv_img_file_with_path}] exist. But continuing as overide_write=[{overide_write}] ...")
             else:
                 raise CustomError (f"{get_method_name()}::Source [{img_file_with_path}] and to be Converted file [{cnv_img_file_with_path}] exist. Skipping conversion ...")
-
-        # # Compare if source & target file names are same. Therefore skip
-        # fn_target_with_ext=f"{fn_with_nopath_noext}{target_ext}"
-        # if fn_with_ext == fn_target_with_ext:
-        #     log_warn_message (f"{get_method_name()}::Source [{fn_with_ext}] and converted file [{fn_target_with_ext}] have same name+extension. Skipping conversion ...")
-        #     return cnv_img_file_with_path
 
         # ----------------------------------------------------------------------------------
         # Check if either source format or expected formats are supported before going ahead
@@ -468,11 +717,14 @@ def setup_logger() -> logging.Logger:
     # Create handler for screen
     s_handler=logging.StreamHandler()
     # Create handler for log file
-    f_handler=logging.FileHandler (f"{const.LOG_DIR}/{const.LOG_FILE_NAME}")
+    #SDSDSD f_handler=logging.FileHandler (f"{const.LOG_DIR}/{const.LOG_FILE_NAME}")
+    f_handler=logging.handlers.RotatingFileHandler(f"{const.LOG_DIR}/{const.LOG_FILE_NAME}", maxBytes=const.LOG_FILE_MAXBYTES) #, backupCount=const.LOG_FILE_BACKUP_COUNT)
+    # from concurrent_log_handler import ConcurrentRotatingFileHandler
+    # f_handler = ConcurrentRotatingFileHandler(f"{const.LOG_DIR}/{const.LOG_FILE_NAME}", 'a', maxBytes=const.LOG_FILE_MAXBYTES, backupCount=const.LOG_FILE_BACKUP_COUNT)
 
     # Set default logging level as INFO and can be overridden in case ISDEBUG==1
-    logging.basicConfig(level=logging.INFO, format=const.LOGFILE_ENTRY_FORMAT_STRING, handlers=[RichHandler(rich_tracebacks=True)])
-    # logging.basicConfig(level=logging.INFO, format=const.LOGFILE_ENTRY_FORMAT_STRING)
+    # logging.basicConfig(level=logging.INFO, format=const.LOGFILE_ENTRY_FORMAT_STRING, handlers=[RichHandler(rich_tracebacks=True)])
+    logging.basicConfig(level=logging.INFO, format=const.LOGFILE_ENTRY_FORMAT_STRING)
 
     if const.ISDEBUG == 1:
         # Set LOG level according to OVERRIDE in constants
@@ -505,9 +757,11 @@ def log_message(msg_str, log_type=logging.DEBUG) -> None:
     elif log_type == logging.INFO:
         logging.getLogger(__name__).info(msg_str)
     elif log_type == logging.ERROR:
-        logging.getLogger(__name__).error(msg_str)
+        logging.getLogger(__name__).error(msg_str, exc_info=True)
+        # logging.getLogger(__name__).exception(msg_str)
     elif log_type == logging.CRITICAL:
-        logging.getLogger(__name__).critical(msg_str)
+        logging.getLogger(__name__).critical(msg_str, exc_info=True)
+        # logging.getLogger(__name__).critical(msg_str, exc_info=sys.exc_info())
     else:
         print(f'{create_dt_string()} - {msg_str}')
 

@@ -21,6 +21,30 @@ This script requires the following libraries to be installed.
 It can be used as,
 [PATH WHERE INSTALLED]\python -m pip install -r .\requirements.txt 
 
+## Create a virtual environment
+### On linux you will need to install python3.10-venv where 3.10 is the version of python that is active
+sudo apt install python3.10-venv
+### Create venv running following command
+python3 -m venv ./.venv
+
+THis will create a folder structure like,
+=> ls -alrt .venv/
+total 24
+lrwxrwxrwx 1 [user] [group]    3 Jan 13 23:15 lib64 -> lib
+drwxrwxr-x 3 [user] [group] 4096 Jan 13 23:15 lib
+drwxrwxr-x 2 [user] [group] 4096 Jan 13 23:15 include
+drwxrwxr-x 5 [user] [group] 4096 Jan 13 23:15 ..
+drwxrwxr-x 5 [user] [group] 4096 Jan 13 23:15 .
+-rw-rw-r-- 1 [user] [group]   71 Jan 13 23:15 pyvenv.cfg
+drwxrwxr-x 2 [user] [group] 4096 Jan 13 23:15 bin
+
+#### Install python libraries based on requirements.txt
+source .venv/bin/activate
+python3 pip install -r requirements.txt 
+
+### Upgrade pip
+python3 -m pip install --upgrade pip
+
 ## Script execution mechanism
 ### -- Common parameter "-overide_debug" available to override log level to DEBUG
 ### Windoze

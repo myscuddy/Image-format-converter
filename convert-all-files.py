@@ -34,19 +34,20 @@ def main():
     from rich.traceback import install
     install(show_locals=True)
 
+    method_name = funcs.get_method_name()
+
     try :
         args = parser.parse_args()
 
         # -- Create custom logger
         logger = funcs.setup_logger()
-        if args.overide_debug == 1:
-            const.ISDEBUG = args.overide_debug
+        if funcs.t_or_f(args.overide_debug):
+            # const.ISDEBUG = args.overide_debug
             logger.setLevel(logging.DEBUG) 
 
-        funcs.log_info_message (f"=============== Inside [{funcs.get_method_name()}] ===============")
-
+        funcs.log_info_message (f"[{method_name}]::=============== Inside ===============")
         processed_file_count=funcs.process_multiple_image_files(args)
-        funcs.log_info_message (f"Finished conversion of [{processed_file_count}] files from [{args.source_path_with_img_files}] ...")
+        funcs.log_info_message (f"[{method_name}]::Finished conversion of [{processed_file_count}] files from [{args.source_path_with_img_files}] ...")
 
     except argparse.ArgumentError as ae:
         funcs.log_error_message (f"ERROR ArgumentError exception encountered:: *** Error: [{str(ae)}] ***")
@@ -55,7 +56,7 @@ def main():
     except SystemExit as se:
         funcs.log_error_message (f"ERROR SystemExit exception encountered:: *** Error: [{str(se)}] ***")
     finally:
-        funcs.log_info_message (f"=============== Exiting [{funcs.get_method_name()}] ===============")
+        funcs.log_info_message (f"[{method_name}]::=============== Exiting ===============")
 
 
 if __name__ == "__main__":
