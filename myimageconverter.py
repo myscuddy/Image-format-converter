@@ -60,14 +60,18 @@ class MyImageConverter:
 
         supported_extensions=('.heic', '.heif', '.HEIC', '.HEIF')
         if img_file_with_path.endswith(supported_extensions):
+            funcs.log_debug_message (f"{funcs.get_method_name()}::img_file_with_path [{img_file_with_path}] endswith [{supported_extensions}] ...")
             """Convert HEIC file to JPG."""
             with Image(filename=img_file_with_path) as img:
                 img.format = target_ext.replace('.','')
                 """Convert image's """
-                if target_ext in ('jpg', 'jpeg'):
+                if target_ext in ('jpg', 'jpeg', '.jpg', '.jpeg'):
+                    funcs.log_debug_message (f"{funcs.get_method_name()}::target_ext [{target_ext}] is in [('jpg', 'jpeg', '.jpg', '.jpeg'] ...")
                     img.convert('RGB')
                     img.compression_quality = const.JPEG_QUALITY_IN_PERCENT
-                    img.save(filename=cnv_img_file_with_path)
+
+                funcs.log_debug_message (f"{funcs.get_method_name()}::Before calling img.save(filename=cnv_img_file_with_path) with [{cnv_img_file_with_path}] ...")
+                img.save(filename=cnv_img_file_with_path)
         else:
             raise funcs.CustomError(f"Source file extension is not in {supported_extensions} - {funcs.get_method_name()}::img_file_with_path [{img_file_with_path}], cnv_img_file_with_path [{cnv_img_file_with_path}], target_ext [{target_ext}], quality% [{const.JPEG_QUALITY_IN_PERCENT}] ...")
 
