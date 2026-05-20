@@ -49,12 +49,12 @@ def main():
         processed_file_count=funcs.process_multiple_image_files(args)
         funcs.log_info_message (f"[{method_name}]::Finished conversion of [{processed_file_count}] files from [{args.source_path_with_img_files}] ...")
 
-    except argparse.ArgumentError as ae:
-        funcs.log_error_message (f"ERROR ArgumentError exception encountered:: *** Error: [{str(ae)}] ***")
+    # except argparse.ArgumentError as ae:
+    #     funcs.log_error_message (f"ERROR ArgumentError exception encountered:: *** Error: [{str(ae)}] ***")
+    # except SystemExit as se:
+    #     funcs.log_error_message (f"ERROR SystemExit exception encountered:: *** Error: [{str(se)}] ***")
     except Exception as e:
-        funcs.log_error_message (f"ERROR converting files from {args.source_path_with_img_files} due to *** Error: [{str(e)}] ***")
-    except SystemExit as se:
-        funcs.log_error_message (f"ERROR SystemExit exception encountered:: *** Error: [{str(se)}] ***")
+        funcs.log_error_message (f"***ERROR converting files from {args.source_path_with_img_files} due to *** Error: [{str(e)}] ***") # type: ignore
     finally:
         funcs.log_info_message (f"[{method_name}]::=============== Exiting ===============")
 

@@ -40,7 +40,7 @@ drwxrwxr-x 2 [user] [group] 4096 Jan 13 23:15 bin
 
 #### Install python libraries based on requirements.txt
 source .venv/bin/activate
-python3 pip install -r requirements.txt 
+python3 -m pip install -r requirements.txt 
 
 ### Upgrade pip
 python3 -m pip install --upgrade pip

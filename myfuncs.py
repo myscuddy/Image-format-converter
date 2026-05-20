@@ -15,7 +15,7 @@ from rich.logging import RichHandler
 from functools import wraps
 
 from PIL import Image, UnidentifiedImageError
-from pillow_heif import HeifImagePlugin
+# from pillow_heif import HeifImagePlugin
 
 # -------------------------------------------------------------------------------------------
 # Import local library

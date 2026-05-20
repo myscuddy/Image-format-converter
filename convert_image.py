@@ -9,7 +9,7 @@ import myfuncs as funcs
 import my_constants as const
 
 from PIL import Image
-from pillow_heif import HeifImagePlugin
+# from pillow_heif import HeifImagePlugin
 
 # -- Include folders to PATH here
 
@@ -32,9 +32,9 @@ def main():
     from rich.traceback import install
     install(show_locals=True)
 
+    method_name = funcs.get_method_name()
     try :
         args = parser.parse_args()
-        method_name = funcs.get_method_name()
 
         # -- Create custom logger
         logger = funcs.setup_logger()
@@ -47,12 +47,12 @@ def main():
         if funcs.t_or_f(args.show_image): 
             funcs.open_and_present_image_file(cnv_image_file_with_path)
         funcs.log_info_message (f"[{method_name}]::Finished conversion of [{args.source_img_file_with_path}] to [{cnv_image_file_with_path}]...")
-    except argparse.ArgumentError as ae:
-        funcs.log_error_message (f"ERROR ArgumentError exception encountered:: *** Error: [{str(ae)}] ***")
-    except SystemExit as se:
-        funcs.log_error_message (f"ERROR SystemExit exception encountered:: *** Error: [{str(se)}] ***")
+    # except argparse.ArgumentError as ae:
+    #     funcs.log_error_message (f"ERROR ArgumentError exception encountered:: *** Error: [{str(ae)}] ***")
+    # except SystemExit as se:
+    #     funcs.log_error_message (f"ERROR SystemExit exception encountered:: *** Error: [{str(se)}] ***")
     except Exception as e:
-        funcs.log_error_message (f"*** ERROR [{str(e)}] converting file [{args.source_img_file_with_path}] ***")
+        funcs.log_error_message (f"***ERROR [{str(e)}] converting file [{args.source_img_file_with_path}] ***") # type: ignore
     finally:
         funcs.log_info_message (f"[{method_name}]::=============== Exiting ===============")
 
